@@ -1,0 +1,42 @@
+{
+  "name": "bundlescout",
+  "version": "1.0.0",
+  "description": "AI-powered bundle-size reviewer for pull requests",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "bundlescout": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Amandtu/bundlescout.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Amandtu/bundlescout/issues"
+  },
+  "homepage": "https://github.com/Amandtu/bundlescout#readme",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
+    "eslint": "^10.4.0",
+    "prettier": "^3.8.3",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "execa": "^9.6.1",
+    "zod": "^4.4.3"
+  }
+}
