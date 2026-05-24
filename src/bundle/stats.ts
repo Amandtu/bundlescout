@@ -20,8 +20,8 @@ function classifyCategory(relPath: string, kind: FileKind): FileCategory {
   return EXTENSION_CATEGORIES[ext] ?? "other";
 }
 
-function stripHash(filename: string): string {
-  return filename.replace(/-[A-Za-z0-9_-]{8,}(\.[a-z0-9]+)$/i, "$1");
+export function stripHash(filename: string): string {
+  return filename.replace(/-[A-Za-z0-9_]{8}(\.[a-z0-9]+)$/i, "$1");
 }
 
 function emptyCategoryTotals(): Record<FileCategory, CategoryStats> {
