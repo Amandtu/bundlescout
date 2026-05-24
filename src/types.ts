@@ -7,14 +7,14 @@ export type FileCategory =
   | "sourcemap"
   | "other";
 
-export type CategoryStats = {
+export interface CategoryStats {
   count: number;
   size: number;
   gzipSize: number;
-};
+}
 
 // A single file in a bundle build
-export type FileEntry = {
+export interface FileEntry {
   /** Absolute path on disk */
   absolutePath: string;
   /** Path relative to the build root (e.g. "assets/index-abc123.js") */
@@ -29,10 +29,10 @@ export type FileEntry = {
   ext: string;
   kind: FileKind;
   category: FileCategory;
-};
+}
 
 // A snapshot of an entire build directory
-export type BundleSnapshot = {
+export interface BundleSnapshot {
   /** Build directory that was scanned */
   buildDir: string;
   /** When this snapshot was captured (ISO string) */
@@ -48,4 +48,51 @@ export type BundleSnapshot = {
   /** All files in the build */
   byCategory: Record<FileCategory, CategoryStats>;
   files: FileEntry[];
-};
+}
+
+export interface CategoryDiff {
+  sizeBefore: number;
+  sizeAfter: number;
+  sizeDelta: number;
+  gzipBefore: number;
+  gzipAfter: number;
+  gzipDelta: number;
+  countBefore: number;
+  countAfter: number;
+}
+
+export interface BundleDiff {
+  base: { capturedAt: string; buildDir: string };
+  head: { capturedAt: string; buildDir: string };
+
+  // High-level totals
+  totals: {
+    sizeBefore: number;
+    sizeAfter: number;
+    sizeDelta: number;
+    gzipBefore: number;
+    gzipAfter: number;
+    gzipDelta: number;
+  };
+
+  // Per-category deltas — most useful "summary" view
+  byCategory: Record<FileCategory, CategoryDiff>;
+
+  // Per-file changes — the detail
+  files: FileDiff[];
+}
+
+export interface FileDiff {
+  logicalPath: string; // the key — matches across builds
+  category: FileCategory;
+  changeType: "added" | "removed" | "modified" | "unchanged";
+  sizeBefore: number; // 0 if added
+  sizeAfter: number; // 0 if removed
+  sizeDelta: number;
+  gzipBefore: number;
+  gzipAfter: number;
+  gzipDelta: number;
+  // For modified files, the actual (hashed) paths in each build, helpful for debugging
+  pathBefore?: string;
+  pathAfter?: string;
+}

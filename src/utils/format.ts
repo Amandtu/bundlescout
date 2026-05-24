@@ -16,3 +16,10 @@ export function formatDelta(delta: number): string {
   const sign = delta > 0 ? "+" : "";
   return `${sign}${formatBytes(delta)}`;
 }
+
+export function formatPercent(delta: number, before: number): string {
+  if (before === 0) return delta === 0 ? "—" : "new";
+  const pct = (delta / before) * 100;
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct.toFixed(1)}%`;
+}
