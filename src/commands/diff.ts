@@ -5,10 +5,21 @@ import { diffSnapshots } from "../bundle/diff.js";
 import type { BundleDiff, FileCategory, FileDiff } from "../types.js";
 import { formatBytes, formatDelta, formatPercent } from "../utils/format.js";
 
-type DiffOptions = {
+type DiffCommandOptions = {
+  top: string;
   json?: boolean;
+  showUnchanged?: boolean;
+  showSourcemaps?: boolean;
+};
+
+export type DiffPrintOptions = {
   top: string;
   showUnchanged?: boolean;
+  showSourcemaps?: boolean;
+  labels?: {
+    base: string;
+    head: string;
+  };
 };
 
 const CATEGORY_LABELS: Record<FileCategory, { label: string; note?: string }> =
@@ -50,11 +61,16 @@ function colourForChange(change: FileDiff): (s: string) => string {
   }
 }
 
-export function printDiffSummary(diff: BundleDiff, opts: DiffOptions): void {
+export function printDiffSummary(
+  diff: BundleDiff,
+  opts: DiffPrintOptions,
+): void {
   const top = parseInt(opts.top, 10);
+  const baseLabel = opts.labels?.base ?? diff.base.buildDir;
+  const headLabel = opts.labels?.head ?? diff.head.buildDir;
 
-  console.log(chalk.bold(`\nDiff: ${diff.base.buildDir}`));
-  console.log(chalk.bold(`  →   ${diff.head.buildDir}\n`));
+  console.log(chalk.bold(`\nDiff: ${baseLabel}`));
+  console.log(chalk.bold(`  →   ${headLabel}\n`));
 
   // Totals
   const { totals } = diff;
@@ -101,22 +117,24 @@ export function printDiffSummary(diff: BundleDiff, opts: DiffOptions): void {
   }
 
   // Top N file changes
-  const changedOnly = opts.showUnchanged
-    ? diff.files
-    : diff.files.filter((f) => f.changeType !== "unchanged");
+  const filtered = diff.files.filter((f) => {
+    if (!opts.showUnchanged && f.changeType === "unchanged") return false;
+    if (!opts.showSourcemaps && f.category === "sourcemap") return false;
+    return true;
+  });
 
-  if (changedOnly.length === 0) {
+  if (filtered.length === 0) {
     console.log(chalk.gray(`\nNo file changes.\n`));
     return;
   }
 
   console.log(
     chalk.bold(
-      `\nTop ${Math.min(top, changedOnly.length)} file changes (by gzip delta):`,
+      `\nTop ${Math.min(top, filtered.length)} file changes (by gzip delta):`,
     ),
   );
 
-  for (const f of changedOnly.slice(0, top)) {
+  for (const f of filtered.slice(0, top)) {
     const { marker, label } = CHANGE_MARKERS[f.changeType];
     const colour = colourForChange(f);
 
@@ -125,12 +143,16 @@ export function printDiffSummary(diff: BundleDiff, opts: DiffOptions): void {
     const sizeContext =
       f.changeType === "modified"
         ? chalk.gray(
-            `(${formatBytes(f.sizeBefore)} → ${formatBytes(f.sizeAfter)})`,
+            `(${f.pathBefore} -> ${f.pathAfter}, ${formatBytes(f.sizeBefore)} → ${formatBytes(f.sizeAfter)})`,
           )
         : "";
+    const displayPath =
+      f.changeType === "modified"
+        ? f.logicalPath
+        : (f.pathAfter ?? f.pathBefore ?? f.logicalPath);
 
     console.log(
-      `  ${colour(marker)} ${colour(rawCol)} / ${colour(gzipCol)}  ${colour(label.padEnd(9))}  ${f.logicalPath}  ${sizeContext}`,
+      `  ${colour(marker)} ${colour(rawCol)} / ${colour(gzipCol)}  ${colour(label.padEnd(9))}  ${displayPath}  ${sizeContext}`,
     );
   }
   console.log();
@@ -145,18 +167,29 @@ export function registerDiffCommand(program: Command): void {
     .option("--json", "Output as JSON instead of a human-readable summary")
     .option("--top <n>", "Show top N file changes", "20")
     .option("--show-unchanged", "Include unchanged files in output", false)
-    .action(async (baseDir: string, headDir: string, opts: DiffOptions) => {
-      const [base, head] = await Promise.all([
-        captureSnapshot(baseDir),
-        captureSnapshot(headDir),
-      ]);
+    .option(
+      "--show-sourcemaps",
+      "Include source maps in file change list",
+      false,
+    )
+    .action(
+      async (baseDir: string, headDir: string, opts: DiffCommandOptions) => {
+        const [base, head] = await Promise.all([
+          captureSnapshot(baseDir),
+          captureSnapshot(headDir),
+        ]);
 
-      const diff = diffSnapshots(base, head);
+        const diff = diffSnapshots(base, head);
 
-      if (opts.json) {
-        console.log(JSON.stringify(diff, null, 2));
-      } else {
-        printDiffSummary(diff, opts);
-      }
-    });
+        if (opts.json) {
+          console.log(JSON.stringify(diff, null, 2));
+        } else {
+          printDiffSummary(diff, {
+            top: opts.top,
+            showUnchanged: opts.showUnchanged,
+            showSourcemaps: opts.showSourcemaps,
+          });
+        }
+      },
+    );
 }

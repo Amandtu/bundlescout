@@ -22,6 +22,7 @@ type ReviewOptions = {
   json?: boolean;
   top: string;
   showUnchanged?: boolean;
+  showSourcemaps?: boolean;
 };
 
 export function registerReviewCommand(program: Command): void {
@@ -41,6 +42,11 @@ export function registerReviewCommand(program: Command): void {
     .option("--json", "Output JSON")
     .option("--top <n>", "Top N file changes", "20")
     .option("--show-unchanged", "Include unchanged files in output", false)
+    .option(
+      "--show-sourcemaps",
+      "Include source maps in file change list",
+      false,
+    )
     .action(async (opts: ReviewOptions) => {
       // ── 1. Validate inputs ───────────────────────────────────────────────
       // - Call assertGitRepo on opts.repo
@@ -112,6 +118,11 @@ export function registerReviewCommand(program: Command): void {
           printDiffSummary(diff, {
             top: opts.top,
             showUnchanged: opts.showUnchanged,
+            showSourcemaps: opts.showSourcemaps,
+            labels: {
+              base: `${opts.base} (${baseSha.slice(0, 7)})`,
+              head: `${opts.head} (${headSha.slice(0, 7)})`,
+            },
           });
         }
       } finally {

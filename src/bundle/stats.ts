@@ -21,7 +21,7 @@ function classifyCategory(relPath: string, kind: FileKind): FileCategory {
 }
 
 export function stripHash(filename: string): string {
-  return filename.replace(/-[A-Za-z0-9_]{8}(\.[a-z0-9]+)$/i, "$1");
+  return filename.replace(/-[A-Za-z0-9_]{8}((?:\.[a-z0-9]+){1,2})$/i, "$1");
 }
 
 function emptyCategoryTotals(): Record<FileCategory, CategoryStats> {
