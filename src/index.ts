@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import chalk from "chalk";
+import { registerReviewCommand } from "./commands/review";
 import { registerSnapshotCommand } from "./commands/snapshot";
 import { registerDiffCommand } from "./commands/diff";
 
@@ -21,6 +22,7 @@ program
 
 registerSnapshotCommand(program);
 registerDiffCommand(program);
+registerReviewCommand(program);
 
 program.parseAsync().catch((err) => {
   console.error(chalk.red(`Error: ${err.message}`));

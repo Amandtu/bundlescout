@@ -50,7 +50,7 @@ function colourForChange(change: FileDiff): (s: string) => string {
   }
 }
 
-function printSummary(diff: BundleDiff, opts: DiffOptions): void {
+export function printDiffSummary(diff: BundleDiff, opts: DiffOptions): void {
   const top = parseInt(opts.top, 10);
 
   console.log(chalk.bold(`\nDiff: ${diff.base.buildDir}`));
@@ -155,9 +155,8 @@ export function registerDiffCommand(program: Command): void {
 
       if (opts.json) {
         console.log(JSON.stringify(diff, null, 2));
-        return;
+      } else {
+        printDiffSummary(diff, opts);
       }
-
-      printSummary(diff, opts);
     });
 }
