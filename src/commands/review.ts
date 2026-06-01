@@ -11,6 +11,8 @@ import { runBuild, type BuildConfig } from "../builder/build.js";
 import { captureSnapshot } from "../bundle/stats.js";
 import { diffSnapshots } from "../bundle/diff.js";
 import { printDiffSummary } from "./diff.js";
+import { reviewBundleDiff } from "../ai/review.js";
+import { printAIReview } from "../ai/render.js";
 
 type ReviewOptions = {
   repo: string;
@@ -23,6 +25,7 @@ type ReviewOptions = {
   top: string;
   showUnchanged?: boolean;
   showSourcemaps?: boolean;
+  withAi?: boolean;
 };
 
 export function registerReviewCommand(program: Command): void {
@@ -45,6 +48,11 @@ export function registerReviewCommand(program: Command): void {
     .option(
       "--show-sourcemaps",
       "Include source maps in file change list",
+      false,
+    )
+    .option(
+      "--with-ai",
+      "Run AI analysis on the bundle diff after computing it",
       false,
     )
     .action(async (opts: ReviewOptions) => {
@@ -111,9 +119,26 @@ export function registerReviewCommand(program: Command): void {
         // - Else: call printDiffSummary(diff, { top: opts.top, showUnchanged: opts.showUnchanged })
         // TODO
         const diff = diffSnapshots(baseSnapshot, headSnapshot);
+        let aiResult: Awaited<ReturnType<typeof reviewBundleDiff>> | null =
+          null;
+        if (opts.withAi) {
+          console.log(chalk.gray("\nCalling Claude for analysis..."));
+          aiResult = await reviewBundleDiff({
+            diff,
+            baseRef: opts.base,
+            baseSha,
+            headRef: opts.head,
+            headSha,
+          });
+        }
+
         console.log(chalk.bold.cyan("=== Result ==="));
+
         if (opts.json) {
-          console.log(JSON.stringify(diff, null, 2));
+          const out = aiResult
+            ? { diff, ai: aiResult.review, usage: aiResult.usage }
+            : { diff };
+          console.log(JSON.stringify(out, null, 2));
         } else {
           printDiffSummary(diff, {
             top: opts.top,
@@ -124,6 +149,15 @@ export function registerReviewCommand(program: Command): void {
               head: `${opts.head} (${headSha.slice(0, 7)})`,
             },
           });
+          if (aiResult) {
+            printAIReview(aiResult.review, {
+              model: "claude-sonnet-4-6",
+              inputTokens: aiResult.usage.inputTokens,
+              outputTokens: aiResult.usage.outputTokens,
+              inputCostPerMillion: 3,
+              outputCostPerMillion: 15,
+            });
+          }
         }
       } finally {
         // ── 8. Always clean up worktrees ───────────────────────────────────
